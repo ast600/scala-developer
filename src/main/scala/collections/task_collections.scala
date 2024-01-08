@@ -1,5 +1,7 @@
 package collections
 
+import scala.collection.immutable
+
 object task_collections {
 
   def isASCIIString(str: String): Boolean = str.matches("[A-Za-z]+")
@@ -15,8 +17,23 @@ object task_collections {
    * HINT: Тут удобно использовать collect и zipWithIndex
    *
    * **/
+  def capitalizeIgnoringASCIIMyWay(text: List[String]): List[String] = {
+    val h :: t = text
+    val newTail = t map {
+      case asciiStr if isASCIIString(asciiStr) => asciiStr.toUpperCase
+      case nonAscii => nonAscii.toLowerCase // если следовать названию метода, а не заданию выше, то, наверное, nonAscii.capitalize
+    }
+
+    h :: newTail
+  }
+
   def capitalizeIgnoringASCII(text: List[String]): List[String] = {
-    List.empty
+    val pFunc: PartialFunction[(String, Int), String] = {
+      case (str, i) if i != 0 => if (isASCIIString(str)) str.toUpperCase else str.toLowerCase
+    }
+
+    text.zipWithIndex
+        .collect(pFunc orElse { case (elem, _) => elem })
   }
 
   /**
@@ -29,7 +46,25 @@ object task_collections {
    * HINT: Для всех возможных комбинаций чисел стоит использовать Map
    * **/
   def numbersToNumericString(text: String): String = {
-    ""
+    val digitChar2StringMapping = immutable.Map(
+      '0' -> "zero",
+      '1' -> "one",
+      '2' -> "two",
+      '3' -> "three",
+      '4' -> "four",
+      '5' -> "five",
+      '6' -> "six",
+      '7' -> "seven",
+      '8' -> "eight",
+      '9' -> "nine"
+    )
+
+    val transformedStrings = text.toCharArray map {
+      case digitChar if digitChar.isDigit => digitChar2StringMapping(digitChar)
+      case otherChar => otherChar.toString
+    }
+
+    transformedStrings.mkString
   }
 
   /**
@@ -46,8 +81,9 @@ object task_collections {
    * Хотим узнать какие машины можно обслужить учитывая этих двух дилеров
    * Реализуйте метод который примет две коллекции (два источника) и вернёт объединенный список уникальный значений
    **/
-  def intersectionAuto(dealerOne: Iterable[Auto], dealerTwo: Iterable[Auto]): Iterable[Auto] = {
-    Iterable.empty
+  def intersectionAuto(dealerOne: Seq[Auto], // отталкиваюсь от случая, что это источник, который содержит неуникальные значения и пр.
+                       dealerTwo: Seq[Auto]): Set[Auto] = { // в противном случае скорее всего использовал бы immutable.HashSet
+    dealerOne.toSet intersect dealerTwo.toSet
   }
 
   /**
@@ -55,7 +91,8 @@ object task_collections {
    * Реализуйте метод который примет две коллекции (два источника)
    * и вернёт уникальный список машин обслуживающихся в первом дилерском центре и не обслуживающимся во втором
    **/
-  def filterAllLeftDealerAutoWithoutRight(dealerOne: Iterable[Auto], dealerTwo: Iterable[Auto]): Iterable[Auto] = {
-    Iterable.empty
+  def filterAllLeftDealerAutoWithoutRight(dealerOne: Seq[Auto],
+                                          dealerTwo: Seq[Auto]): Set[Auto] = {
+    dealerOne.toSet diff dealerTwo.toSet
   }
 }
