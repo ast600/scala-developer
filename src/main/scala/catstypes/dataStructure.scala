@@ -194,7 +194,7 @@ import scala.util.Try
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 object Demo2 extends App {
-  val k: Try[Int] = Future(100500)
+  val k: Try[Int] = Try(100500)
   val s: Try[String] = k map toHexString
 }
 
