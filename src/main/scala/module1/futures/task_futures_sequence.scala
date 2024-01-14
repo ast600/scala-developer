@@ -1,8 +1,7 @@
 package module1.futures
 
-import module1.futures.HomeworksUtils.TaskSyntax
-
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 object task_futures_sequence {
 
@@ -21,6 +20,12 @@ object task_futures_sequence {
    */
   def fullSequence[A](futures: List[Future[A]])
                      (implicit ex: ExecutionContext): Future[(List[A], List[Throwable])] =
-    task"Реализуйте метод `fullSequence`" ()
-
+    futures.foldLeft( Future.successful { (List.empty[A], List.empty[Throwable]) } ) {
+      (futAcc, future) => future.transformWith {
+        case Success(value) =>
+          futAcc.map { case (values, errors) => (value +: values, errors) }
+        case Failure(exception) =>
+          futAcc.map { case (values, errors) => (values, exception +: errors) }
+      }
+    }.map { case (reversedValues, reversedExceptions) => (reversedValues.reverse, reversedExceptions.reverse) }
 }
