@@ -1,15 +1,21 @@
 package catsconcurrency.cats_effect_homework
 
-import cats.effect.Sync
+import cats.effect.{ IO, Sync }
 import cats.implicits._
 import Wallet._
+
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.nio.file.{ Files, Paths, StandardOpenOption }
 
 // DSL управления электронным кошельком
 trait Wallet[F[_]] {
   // возвращает текущий баланс
   def balance: F[BigDecimal]
+
   // пополняет баланс на указанную сумму
   def topup(amount: BigDecimal): F[Unit]
+
   // списывает указанную сумму с баланса (ошибка если средств недостаточно)
   def withdraw(amount: BigDecimal): F[Either[WalletError, Unit]]
 }
@@ -24,10 +30,35 @@ trait Wallet[F[_]] {
 // - java.nio.file.Files.readString
 // - java.nio.file.Files.exists
 // - java.nio.file.Paths.get
-final class FileWallet[F[_]: Sync](id: WalletId) extends Wallet[F] {
-  def balance: F[BigDecimal] = ???
-  def topup(amount: BigDecimal): F[Unit] = ???
-  def withdraw(amount: BigDecimal): F[Either[WalletError, Unit]] = ???
+final class FileWallet[F[_] : Sync](id: WalletId) extends Wallet[F] {
+  private val TmpDirectoryPath = Paths.get(URI.create(System.getProperty("java.io.tmpdir")))
+
+  def balance: F[BigDecimal] = Sync[F].delay { Files.readString(TmpDirectoryPath.resolve(id), StandardCharsets.UTF_8) }
+                                      .map { decimal => BigDecimal(decimal) }
+
+  def topup(amount: BigDecimal): F[Unit] = {
+    val updated = balance.map { _ + amount }
+    writeBalance(updated)
+  }
+
+  def withdraw(amount: BigDecimal): F[Either[WalletError, Unit]] =
+    balance.map {
+      case sum if sum >= amount =>
+        val withdrawn = Sync[F].pure{ sum - amount }
+        Right(writeBalance(withdrawn))
+      case _ => Left(BalanceTooLow)
+    }
+
+  private def writeBalance(b: F[BigDecimal]): F[Unit] =
+    b.map { b => b.toString().getBytes(StandardCharsets.UTF_8) }
+     .flatMap { byteArray =>
+       Sync[F].delay {
+         Files.write(TmpDirectoryPath.resolve(id),
+                     byteArray,
+                     StandardOpenOption.CREATE,
+                     StandardOpenOption.TRUNCATE_EXISTING)
+       }
+     }
 }
 
 object Wallet {
@@ -37,10 +68,11 @@ object Wallet {
   // Здесь нужно использовать обобщенную версию уже пройденного вами метода IO.delay,
   // вызывается она так: Sync[F].delay(...)
   // Тайпкласс Sync из cats-effect описывает возможность заворачивания сайд-эффектов
-  def fileWallet[F[_]: Sync](id: WalletId): F[Wallet[F]] = ???
+  def fileWallet[F[_] : Sync](id: WalletId): F[Wallet[F]] = ???
 
   type WalletId = String
 
   sealed trait WalletError
+
   case object BalanceTooLow extends WalletError
 }
