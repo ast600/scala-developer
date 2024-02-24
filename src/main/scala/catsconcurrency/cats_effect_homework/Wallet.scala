@@ -1,12 +1,12 @@
 package catsconcurrency.cats_effect_homework
 
-import cats.effect.{ IO, Sync }
+import cats.effect.Sync
 import cats.implicits._
-import Wallet._
+import catsconcurrency.cats_effect_homework.Wallet._
 
 import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.nio.file.{ Files, Paths, StandardOpenOption }
+import java.nio.file.{ Files, Path, Paths, StandardOpenOption }
 
 // DSL управления электронным кошельком
 trait Wallet[F[_]] {
@@ -31,34 +31,38 @@ trait Wallet[F[_]] {
 // - java.nio.file.Files.exists
 // - java.nio.file.Paths.get
 final class FileWallet[F[_] : Sync](id: WalletId) extends Wallet[F] {
-  private val TmpDirectoryPath = Paths.get(URI.create(System.getProperty("java.io.tmpdir")))
 
-  def balance: F[BigDecimal] = Sync[F].delay { Files.readString(TmpDirectoryPath.resolve(id), StandardCharsets.UTF_8) }
-                                      .map { decimal => BigDecimal(decimal) }
+  import FileWallet.TmpDirectoryPath
+
+  def balance: F[BigDecimal] = Sync[F]
+    .delay { Files.readString(TmpDirectoryPath.resolve(s"$id.txt"), StandardCharsets.UTF_8) }
+    .map { decimal => BigDecimal(decimal) }
+
 
   def topup(amount: BigDecimal): F[Unit] = {
-    val updated = balance.map { _ + amount }
-    writeBalance(updated)
+    balance.map { _ + amount }
+           .flatMap { writeBalance }
   }
 
   def withdraw(amount: BigDecimal): F[Either[WalletError, Unit]] =
-    balance.map {
-      case sum if sum >= amount =>
-        val withdrawn = Sync[F].pure{ sum - amount }
-        Right(writeBalance(withdrawn))
-      case _ => Left(BalanceTooLow)
+    balance.flatMap {
+      case sum if sum >= amount => writeBalance(sum - amount).map { _.asRight[WalletError] }
+      case _ => BalanceTooLow.pure[F].map { _.asLeft[Unit] }
     }
 
-  private def writeBalance(b: F[BigDecimal]): F[Unit] =
-    b.map { b => b.toString().getBytes(StandardCharsets.UTF_8) }
-     .flatMap { byteArray =>
-       Sync[F].delay {
-         Files.write(TmpDirectoryPath.resolve(id),
-                     byteArray,
-                     StandardOpenOption.CREATE,
-                     StandardOpenOption.TRUNCATE_EXISTING)
-       }
-     }
+  private def writeBalance(b: BigDecimal): F[Unit] = {
+    Sync[F].delay {
+      Files.write(TmpDirectoryPath.resolve(s"$id.txt"),
+                  b.toString().getBytes(StandardCharsets.UTF_8),
+                  StandardOpenOption.TRUNCATE_EXISTING)
+    }
+  }
+}
+
+object FileWallet {
+  // Можно было бы обернуть в IO/Sync из-за side-effect'ов со стороны java.net.URI
+  // Возможно, при запуске на Windows придется поиграть со схемой (писал на Ubuntu)
+  val TmpDirectoryPath: Path = Paths.get(URI.create("file://" + System.getProperty("java.io.tmpdir") + "/"))
 }
 
 object Wallet {
@@ -68,7 +72,20 @@ object Wallet {
   // Здесь нужно использовать обобщенную версию уже пройденного вами метода IO.delay,
   // вызывается она так: Sync[F].delay(...)
   // Тайпкласс Sync из cats-effect описывает возможность заворачивания сайд-эффектов
-  def fileWallet[F[_] : Sync](id: WalletId): F[Wallet[F]] = ???
+  def fileWallet[F[_] : Sync](id: WalletId): F[Wallet[F]] = {
+    val underlyingFilePath = FileWallet.TmpDirectoryPath.resolve(s"$id.txt")
+
+    val createFileIfNotExistsEff = for {
+      fileNotExists <- Sync[F].delay { Files.notExists(underlyingFilePath) }
+      _ <- if (fileNotExists) Sync[F].delay {
+        Files.write(underlyingFilePath,
+                    BigDecimal(0).toString.getBytes(StandardCharsets.UTF_8),
+                    StandardOpenOption.CREATE_NEW)
+      } else Sync[F].unit
+    } yield ()
+
+    createFileIfNotExistsEff >> Sync[F].pure { new FileWallet[F](id) }
+  }
 
   type WalletId = String
 
