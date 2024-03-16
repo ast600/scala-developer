@@ -53,7 +53,7 @@ package object zio_homework {
       _ <- putStrLnErr(s"Default port is `${conf.port}`")
     } yield conf
 
-    config.load.orElse { fallbackEffect }
+    config.load.orElse { fallbackEffect }.orDie
   }
 
 
@@ -121,7 +121,7 @@ package object zio_homework {
       start <- currentTime(MILLISECONDS)
       value <- effectToTrack
       end <- currentTime(MILLISECONDS)
-      _ <- putStrLn(s"The effect execution took: ${ end - start } millis.")
+      _ <- putStrLn(s"The effect execution took: ${ end - start } millis.").orDie
     } yield value
 
   /**
