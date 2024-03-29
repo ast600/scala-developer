@@ -1,5 +1,5 @@
-import sbt.Keys.libraryDependencies
-import sbt._
+import sbt.Keys.{ libraryDependencies, scalaBinaryVersion }
+import sbt.*
 
 object Dependencies {
   lazy val KindProjectorVersion = "0.10.3"
@@ -16,9 +16,12 @@ object Dependencies {
 
   lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.2.11"
 
+  lazy val refined = "eu.timepit" %% "refined" % "0.9.8" excludeAll ("org.scala-lang.modules" %% "scala-xml")
+
   lazy val cats = Seq(
     "org.typelevel" %% "cats-core" % "2.1.0",
-    "org.typelevel" %% "cats-effect" % "3.4.5"
+    "org.typelevel" %% "cats-effect" % "3.4.5",
+    "org.typelevel" %% "cats-effect-testing-scalatest" % "1.4.0" % Test
   )
 
   lazy val zio: Seq[ModuleID] = Seq(
@@ -69,6 +72,7 @@ object Dependencies {
     "io.circe" %% "circe-core" % CirceVersion,
     "io.circe" %% "circe-generic" % CirceVersion,
     "io.circe" %% "circe-parser" % CirceVersion,
+    "io.circe" %% "circe-fs2" % "0.14.0",
     "io.circe" %% "circe-derivation" % "0.13.0-M4",
     "org.http4s" %% "http4s-circe" % "0.23.14"
   )

@@ -22,5 +22,6 @@ libraryDependencies ++= Dependencies.quill
 libraryDependencies ++= Dependencies.testContainers
 libraryDependencies ++= Dependencies.circe
 libraryDependencies ++= Dependencies.akkaContainers
+libraryDependencies += Dependencies.refined
 
 scalacOptions += "-Ymacro-annotations"
