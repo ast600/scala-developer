@@ -6,10 +6,13 @@ object Dependencies {
   lazy val ZioVersion = "1.0.4"
   lazy val ZIOHttpVersion = "1.0.0.0-RC27"
   lazy val LiquibaseVersion = "3.4.2"
-  lazy val PostgresVersion = "42.3.1"
+  lazy val PostgresVersion = "42.7.1"
   lazy val LogbackVersion = "1.2.3"
   lazy val CirceVersion = "0.14.2"
 
+
+  lazy val h2 =
+    "com.h2database" % "h2" % "1.4.200"
 
   lazy val kindProjector =
     "org.typelevel" %% "kind-projector" % KindProjectorVersion
@@ -54,14 +57,14 @@ object Dependencies {
 
   lazy val quill = Seq(
     "io.getquill"          %% "quill-jdbc-zio" % "3.12.0",
-    "io.github.kitlangton" %% "zio-magic"      % "0.3.11"
+    "io.github.kitlangton" %% "zio-magic"      % "0.3.11",
   )
 
   lazy val liquibase = "org.liquibase" % "liquibase-core" % LiquibaseVersion
 
   lazy val  testContainers = Seq(
-    "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.39.12"  % Test,
-    "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.39.12"  % Test
+    "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.41.2"  % Test,
+    "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.41.2"  % Test
   )
 
   lazy val postgres = "org.postgresql" % "postgresql" % PostgresVersion
